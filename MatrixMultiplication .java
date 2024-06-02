@@ -3,8 +3,8 @@ import java.util.Random;
 public class MatrixMultiplication {
     
     //burada matrixlerimizi ve boyutlarını tanımlıyoruz
-    static final int MAX = 400;
-    static final int MAX_THREAD = 400;
+    static final int MAX = 5;
+    static final int MAX_THREAD = 5;
     static int[][] matA = new int[MAX][MAX];
     static int[][] matB = new int[MAX][MAX];
     static int[][] matC = new int[MAX][MAX];
