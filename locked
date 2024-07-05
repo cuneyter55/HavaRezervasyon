@@ -1,0 +1,105 @@
+package hava2;
+
+import java.time.LocalTime;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+class RezervasyonVeritabani {
+    private final Map<String, Boolean> koltukDurumlari;
+    private final Lock lock;
+
+    public RezervasyonVeritabani() {
+        koltukDurumlari = new HashMap<>();
+        for (int i = 1; i <= 10; i++) {
+            koltukDurumlari.put("Seat " + i, false); // Başlangıçta tüm koltuklar boş
+        }
+        lock = new ReentrantLock();
+    }
+
+    public void makeReservation(String seat, String writerName) {
+        lock.lock();
+        try {
+            if (!koltukDurumlari.get(seat)) {
+                koltukDurumlari.put(seat, true); // Koltuk rezerve edildi
+                System.out.println(LocalTime.now() + " " + writerName + " booked seat " + seat + " successfully.");
+            } else {
+                System.out.println(LocalTime.now() + " " + writerName + " failed to book seat " + seat + ". Already booked.");
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public boolean queryReservation(String seat, String readerName) {
+        lock.lock();
+        try {
+            boolean status = koltukDurumlari.getOrDefault(seat, false);
+            System.out.println(LocalTime.now() + " " + readerName + " checked reservation status of seat " + seat + ": " + (status ? "Booked" : "Available"));
+            return status;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public Map<String, Boolean> getKoltukDurumlari() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getKoltukDurumlari'");
+    }
+}
+
+class WriterThread extends Thread {
+    private final RezervasyonVeritabani veritabani;
+    private final String seat;
+    private final String writerName;
+
+    public WriterThread(RezervasyonVeritabani veritabani, String seat, String writerName) {
+        this.veritabani = veritabani;
+        this.seat = seat;
+        this.writerName = writerName;
+    }
+
+    @Override
+    public void run() {
+        veritabani.makeReservation(seat, writerName);
+    }
+}
+
+class ReaderThread extends Thread {
+    private final RezervasyonVeritabani veritabani;
+    private final String seat;
+    private final String readerName;
+
+    public ReaderThread(RezervasyonVeritabani veritabani, String seat, String readerName) {
+        this.veritabani = veritabani;
+        this.seat = seat;
+        this.readerName = readerName;
+    }
+
+    @Override
+    public void run() {
+        veritabani.queryReservation(seat, readerName);
+    }
+}
+
+public class HavayoluRezervasyonSistemi {
+    public static void main(String[] args) {
+        RezervasyonVeritabani veritabani = new RezervasyonVeritabani();
+
+        WriterThread writer1 = new WriterThread(veritabani, "Seat 1", "Writer1");
+        WriterThread writer2 = new WriterThread(veritabani, "Seat 1", "Writer2");
+        WriterThread writer3 = new WriterThread(veritabani, "Seat 1", "Writer3");
+
+        ReaderThread reader1 = new ReaderThread(veritabani, "Seat 1", "Reader1");
+        ReaderThread reader2 = new ReaderThread(veritabani, "Seat 1", "Reader2");
+        ReaderThread reader3 = new ReaderThread(veritabani, "Seat 1", "Reader3");
+
+        writer1.start();
+        writer2.start();
+        writer3.start();
+        reader1.start();
+        reader2.start();
+        reader3.start();
+    }
+}
