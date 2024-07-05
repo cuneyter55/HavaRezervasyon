@@ -1,0 +1,23 @@
+package hava1;
+import java.util.Random;
+
+public class WriterThread extends Thread {
+
+    private RezervasyonVeritabani veritabani;
+    private String koltuk;
+
+    public WriterThread(RezervasyonVeritabani veritabani, String koltuk) {
+        this.veritabani = veritabani;
+        this.koltuk = koltuk;
+    }
+
+    @Override
+    public void run() {
+        try {
+            Thread.sleep(new Random().nextInt(1000)); // Rastgele bekleme süresi ekleniyor
+            veritabani.makeReservation(koltuk);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
