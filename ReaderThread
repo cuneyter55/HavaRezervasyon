@@ -1,0 +1,15 @@
+
+public class ReaderThread extends Thread {
+    private final RezervasyonVeritabani veritabani;
+    private final String koltuk;
+
+    public ReaderThread(RezervasyonVeritabani veritabani, String koltuk) {
+        this.veritabani = veritabani;
+        this.koltuk = koltuk;
+    }
+
+    @Override
+    public void run() {
+        veritabani.queryReservation(koltuk);
+    }
+}
