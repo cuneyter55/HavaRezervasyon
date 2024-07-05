@@ -1,0 +1,203 @@
+package hava1;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+// Havayolu rezervasyon sistemi
+public class HavayoluRezervasyonSistemi extends JFrame {
+    private final RezervasyonVeritabani veritabani;
+    private JTextArea goruntuAlani;
+    private JComboBox<String> koltukComboBox;
+    private JButton rezerveButonu;
+    private JButton iptalButonu;
+    private JButton sorgulaButonu;
+
+    public HavayoluRezervasyonSistemi() {
+        veritabani = new RezervasyonVeritabani();
+        arayuzuOlustur();
+    }
+
+    // Kullanıcı arayüzünü oluşturan metot
+    private void arayuzuOlustur() {
+        setTitle("Havayolu Rezervasyon Sistemi");
+        setSize(600, 400);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+
+        goruntuAlani = new JTextArea();
+        goruntuAlani.setEditable(false);
+        goruntuAlani.setBackground(Color.BLACK);
+        goruntuAlani.setForeground(Color.WHITE); // Metin rengi beyaz
+        JScrollPane scrollPane = new JScrollPane(goruntuAlani);
+
+        koltukComboBox = new JComboBox<>();
+        for (int i = 1; i <= 10; i++) {
+            koltukComboBox.addItem("Koltuk" + i);
+        }
+
+        rezerveButonu = new JButton("Rezerve Et");
+        rezerveButonu.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String secilenKoltuk = (String) koltukComboBox.getSelectedItem();
+                new WriterThread(veritabani, secilenKoltuk, true).start();
+                guncelleGoruntu();
+            }
+        });
+
+        iptalButonu = new JButton("İptal Et");
+        iptalButonu.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String secilenKoltuk = (String) koltukComboBox.getSelectedItem();
+                new WriterThread(veritabani, secilenKoltuk, false).start();
+                guncelleGoruntu();
+            }
+        });
+
+        sorgulaButonu = new JButton("Sorgula");
+        sorgulaButonu.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String secilenKoltuk = (String) koltukComboBox.getSelectedItem();
+                new ReaderThread(veritabani, secilenKoltuk).start();
+                guncelleGoruntu();
+            }
+        });
+
+        JPanel kontrolPaneli = new JPanel();
+        kontrolPaneli.setLayout(new GridLayout(4, 1, 10, 10));
+        kontrolPaneli.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        kontrolPaneli.add(koltukComboBox);
+        kontrolPaneli.add(rezerveButonu);
+        kontrolPaneli.add(iptalButonu);
+        kontrolPaneli.add(sorgulaButonu);
+
+        add(scrollPane, BorderLayout.CENTER);
+        add(kontrolPaneli, BorderLayout.EAST);
+    }
+
+    // Kullanıcı arayüzünü güncelleyen metot
+    private void guncelleGoruntu() {
+        Map<String, Boolean> koltuklar = veritabani.getKoltukDurumlari();
+        goruntuAlani.setText("Koltuk Durumları:\n");
+        goruntuAlani.append("=================\n");
+        for (Map.Entry<String, Boolean> entry : koltuklar.entrySet()) {
+            goruntuAlani.append(entry.getKey() + ": " + (entry.getValue() ? "Rezerve" : "Boş") + "\n");
+        }
+    }
+
+    // Ana metot: Programı başlatan metot
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new HavayoluRezervasyonSistemi().setVisible(true);
+            }
+        });
+    }
+}
+
+// Rezervasyon veritabanı sınıfı
+class RezervasyonVeritabani {
+    private final Map<String, Boolean> koltukDurumlari;
+    private final Lock lock;
+
+    public RezervasyonVeritabani() {
+        koltukDurumlari = new HashMap<>();
+        for (int i = 1; i <= 10; i++) {
+            koltukDurumlari.put("Koltuk" + i, false); // Başlangıçta tüm koltuklar boş
+        }
+        lock = new ReentrantLock();
+    }
+
+    // Koltuk rezervasyonu yapma işlemi
+    public void makeReservation(String koltuk) {
+        lock.lock();
+        try {
+            if (!koltukDurumlari.get(koltuk)) {
+                koltukDurumlari.put(koltuk, true); // Koltuk rezerve edildi
+                System.out.println(koltuk + " başarıyla rezerve edildi.");
+            } else {
+                System.out.println(koltuk + " zaten rezerve edilmiştir.");
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    // Koltuk rezervasyonu iptal etme işlemi
+    public void cancelReservation(String koltuk) {
+        lock.lock();
+        try {
+            if (koltukDurumlari.get(koltuk)) {
+                koltukDurumlari.put(koltuk, false); // Koltuk rezervasyonu iptal edildi
+                System.out.println(koltuk + " rezervasyonu iptal edildi.");
+            } else {
+                System.out.println(koltuk + " zaten boş.");
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    // Koltuk durumunu sorgulama işlemi
+    public boolean queryReservation(String koltuk) {
+        lock.lock();
+        try {
+            boolean durum = koltukDurumlari.getOrDefault(koltuk, false);
+            System.out.println(koltuk + " rezervasyon durumu: " + (durum ? "Rezerve" : "Boş"));
+            return durum;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    // Tüm koltuk durumlarını döndüren metot
+    public Map<String, Boolean> getKoltukDurumlari() {
+        return new HashMap<>(koltukDurumlari);
+    }
+}
+
+// Writer thread sınıfı (Koltuk rezervasyonu yapar veya iptal eder)
+class WriterThread extends Thread {
+    private final RezervasyonVeritabani veritabani;
+    private final String koltuk;
+    private final boolean rezervasyonYap;
+
+    public WriterThread(RezervasyonVeritabani veritabani, String koltuk, boolean rezervasyonYap) {
+        this.veritabani = veritabani;
+        this.koltuk = koltuk;
+        this.rezervasyonYap = rezervasyonYap;
+    }
+
+    @Override
+    public void run() {
+        if (rezervasyonYap) {
+            veritabani.makeReservation(koltuk);
+        } else {
+            veritabani.cancelReservation(koltuk);
+        }
+    }
+}
+
+// Reader thread sınıfı (Koltuk rezervasyon durumunu sorgular)
+class ReaderThread extends Thread {
+    private final RezervasyonVeritabani veritabani;
+    private final String koltuk;
+
+    public ReaderThread(RezervasyonVeritabani veritabani, String koltuk) {
+        this.veritabani = veritabani;
+        this.koltuk = koltuk;
+    }
+
+    @Override
+    public void run() {
+        veritabani.queryReservation(koltuk);
+    }
+}
